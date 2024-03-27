@@ -5,28 +5,17 @@ defmodule PolicyOperationsEngine do
     config = build_config()
     offer_changeset = config.adapter.create_offer(attrs)
 
-    Ecto.Multi.new()
-    |> Ecto.Multi.insert(:offer, offer_changeset)
-    |> Ecto.Multi.insert(:state, fn %{offer: offer} ->
-      %PolicyOperationsEngine.StateMachine{offer: %{offer_id: offer.id}}
-    end)
-    |> config.repo.transaction()
+    offer_changeset
+    |> config.repo.insert()
   end
 
   def issue_policy(offer, attrs) do
     config = build_config()
 
-    offer_state =
-      PolicyOperationsEngine.StateMachine
-      |> where([s], s.offer["offer_id"] == ^offer.id)
-      |> config.repo.one!()
+    policy_changeset = config.adapter.issue_policy(offer, attrs)
 
-    policy_changeset = config.adapter.issue_policy(%{offer_state | id: nil}, attrs)
-
-    Ecto.Multi.new()
-    |> Ecto.Multi.insert(:policy, policy_changeset)
-    |> dbg()
-    |> config.repo.transaction()
+    policy_changeset
+    |> config.repo.insert()
   end
 
   def change_policy(policy, changes) do
